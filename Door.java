@@ -3,7 +3,8 @@ import java.util.List;
 
 /**
  * 
- * Door
+ * The Door class represents a connection or route between two places. they are one way and belong to location objects. 
+ * it has fields storing the direction the doors leads or points, the location you leave from, the loation you enter to., and a class field representing all possible valid directions.
  */
 public class Door {
 
@@ -14,7 +15,7 @@ public class Door {
     private static ArrayList<String> directions = new ArrayList<String>(List.of("n", "s", "e", "w"));
 
     /**
-     * 
+     * default constructor, not fully initialized
      */
     public Door() {
         this.direction = "n";

@@ -1,7 +1,10 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 // okay its just the locations that arent being createed right now it ll be okay
 
@@ -19,7 +22,7 @@ public class TourUMW { // works.
      * @param args Command line arguments. N/A
      */
     public static void main(String[] args) {
-        TourStatus status = new TourStatus();
+        TourStatus status = TourStatus.getInstance();
         Scanner s = new Scanner(System.in);
 
         System.out.println("\nWelcome to the simulator!");
@@ -35,7 +38,89 @@ public class TourUMW { // works.
                 campusLoop(s, status);
             }
         };
-        System.out.println("Thank you for using the simulator! Exiting now.");
+        System.out.println("\n\nThank you for using the simulator! Exiting now.\n");
+    }
+
+    /**
+     * This function represents the the main tour loop. It presents the user with information about the campus,
+     * prompts the user for a direction to move in, and updates the users position.
+     * 
+     * @param s Scanner to read user input.
+     * @param status TourStatus object that represents information related to the users tour.
+     * Used to store and update and store users location on the tour.
+     */
+    private static void campusLoop(Scanner s, TourStatus status) {
+        //System.out.println();
+        boolean continueTour = true;
+        System.out.println(status.getCurrentLocation().describeLocation());
+        status.getCurrentLocation().setHaveVisited(true);
+        while (continueTour) { 
+            // get current location
+            // uneccisary?
+            //Location cLocation = status.getCurrentLocation();
+  
+            // print current location
+            // xed out bc its going to be done through movement command
+            /*String desc = "\n\n" + cLocation.getName() + "\n";
+            if (cLocation.getHaveVisited() == false) {
+                desc += cLocation.getDescription() + "\n";
+            }
+            System.out.println(desc);
+            status.getCurrentLocation().setHaveVisited(true);*/
+
+            // print directions
+            // also going to be done in movement command
+            //System.out.println(cLocation.describeDoors());
+
+            // ask for direction
+            // add pickup drop and backpack instructions
+            System.out.print("enter a direction, or type 'quit' to exit campus: ");
+            UserInputCommand command = parseInput(s.nextLine());
+
+            // carry out user input
+            if (command == null) {
+                continueTour = false;
+            } else {
+                System.out.println(command.carryOut());
+            } /*else if (!Door.isValidDir(dir)) {
+                System.out.print("Error: please enter a valid direction.");
+            } else {
+                status.updateTourLocation(dir);
+                if (status.getCurrentLocation().equals(cLocation)) { // if status couldn't update location
+                    System.out.print("Error: could not move in specified direction.");
+                }
+            }*/
+        }
+        System.out.println("\n\n\nYou've exited the tour of " + status.getCampus().getCampusName() + "! ");
+    }
+
+    public static UserInputCommand parseInput(String input) {
+        String in = input.trim().toUpperCase();
+
+        String first = in.substring(0,1);
+        Set<String> dirs = Set.of("N", "S", "E", "W"); 
+        String[] words = in.split(" ");
+        String itemName = Arrays.stream(words).skip(1).collect(Collectors.joining(" "));
+
+        // switch?
+        UserInputCommand command = null;
+        if (dirs.contains(first)) {
+            command = new MovementCommand(first);
+        } else if (words[0].equals("PICKUP")) {
+            // test if itemName exists
+            command = new PickupCommand(itemName);
+        } else if (words[0].equals("DROP")) {
+            // test if itemName exists
+            command = new DropCommand(itemName);
+        } else if (words[0].equals("BACKPACK")) {
+            command = new BackpackCommand();
+        } else if (words[0].equals("QUIT")) {
+            command = null;
+        } else {
+            command = new InvalidCommand(input);
+        }
+        
+        return command;
     }
 
     /**
@@ -46,15 +131,17 @@ public class TourUMW { // works.
      */
     public static Campus setUpCampus(Scanner s) { // this needs to somehow parse bad input files. its supposed to fail if format is off
         Campus c = null;
+        boolean unfinishedSetup = true;
         String filename = getValidFilename(s);
-
-        while (filename != null) {
+        if (filename == null) { // user wants to quit
+            unfinishedSetup = false;
+        }
+        while (unfinishedSetup) {
             try (Scanner fs = new Scanner(Path.of(filename))) {
                 ArrayList<String> lines = new ArrayList<>();
                 boolean isALocation = true;
 
                 while (fs.hasNextLine()) {
-                    
                     String line = fs.nextLine().trim();
 
                     if (c == null) {
@@ -65,7 +152,7 @@ public class TourUMW { // works.
                         lines.add(line);
                         //System.out.println(line);
                     } else if (lines.size() != 0){ // line must be a +++, delimiting end of object to-be
-                        //System.out.println()
+                        
                         if (isALocation) { // is end of a location
                             String name = lines.get(0);
                             lines.removeFirst();
@@ -83,80 +170,29 @@ public class TourUMW { // works.
 
                             Location leaveLoc = c.getLocation(leave);
                             Location enterLoc = c.getLocation(enter);
-                            //Location leaveLoc = c.getLocations().get(leave);
-                            //Location enterLoc = c.getLocations().get(enter);
                             Door d = new Door(dir, leaveLoc, enterLoc); // leaving door, points away from 
 
-                            //c.getLocations().get(leave).addDoor(d); // adds door to location: door points outward from its location
-                            c.getLocation(leave).addDoor(d);
+                            c.getLocation(leave).addDoor(d); // adds door to location: door points outward from its location
                         }
                         lines.clear(); // cleans up for next object
                     }
                     // tests to see if file was valid; doors need to be connected properly for functionality
-                    System.out.println("f");
+                    
                 }
-                filename = null;
+                unfinishedSetup = false;
             } catch(Exception e) { // catches any exceptions that occur when reading file. exception thrown implies invalid format, but not all problems with invalid format may be caught.
-               System.out.println("g");
-                /*System.out.println("Error: critical file error. If you wish to continue, enter a different filename.");
+                System.out.println("Error: " + filename + " is not correctly formatted.");
                 String newFilename = getValidFilename(s);
-                if (newFilename == null) {
-                    filename = null; // quits setupCampus loop
-                } else {
-                    filename = newFilename;
-                }
-                c = null; */// clears any bad data and allows simulator loop to quit   
-                System.out.println("excepion reachedd");
+                
+                if (newFilename == null) { // user chose to quit
+                    unfinishedSetup = false; 
+                } 
+                c = null; // clears any bad data and if necissary allows simulator loop to quit   
+                
             }
 
         }
-        System.out.println("h");
         return c;
-    }
-
-    /**
-     * This function represents the the main tour loop. It presents the user with information about the campus,
-     * prompts the user for a direction to move in, and updates the users position.
-     * 
-     * @param s Scanner to read user input.
-     * @param status TourStatus object that represents information related to the users tour.
-     * Used to store and update and store users location on the tour.
-     */
-    private static void campusLoop(Scanner s, TourStatus status) {
-        System.out.println();
-        boolean continueTour = true;
-        while (continueTour) { 
-            // get current location
-            Location cLocation = status.getCurrentLocation();
-  
-            // print current location
-            String desc = "\n\n" + cLocation.getName() + "\n";
-            if (cLocation.getHaveVisited() == false) {
-                desc += cLocation.getDescription() + "\n";
-            }
-            System.out.println(desc);
-            status.getCurrentLocation().setHaveVisited(true);
-
-            // print directions
-            System.out.println(cLocation.describeDoors());
-
-            // ask for direction
-            System.out.print("enter a direction, or type 'q' to exit campus: ");
-            String dir = s.nextLine().trim();
-
-            // move user
-            if (dir.substring(0,1).equalsIgnoreCase("q")) {
-                continueTour = false;
-            } else if (!Door.isValidDir(dir)) {
-                System.out.print("\nError: please enter a valid direction.");
-            } else {
-                status.updateTourLocation(dir);
-                if (status.getCurrentLocation().equals(cLocation)) { // if status couldn't update location
-                    System.out.print("\nError: could not move in specified direction.");
-                }
-            }
-        }
-        System.out.println("\n\n\nYou've exited the tour of " + status.getCampus().getCampusName() + "! ");
     }
 
     /**

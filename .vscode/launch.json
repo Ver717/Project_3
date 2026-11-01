@@ -9,6 +9,13 @@
             "name": "TourUMW",
             "request": "launch",
             "mainClass": "TourUMW",
+            "projectName": "Project_3_bd0f38bc"
+        },
+        {
+            "type": "java",
+            "name": "TourUMW",
+            "request": "launch",
+            "mainClass": "TourUMW",
             "projectName": "Project_2_bd0f38bb"
         },
         {
