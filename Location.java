@@ -1,7 +1,8 @@
 import java.util.ArrayList;
+import java.util.Optional;
+import java.util.Set;
 
 /**
- * 
  * Location class reperesents a location on a campus. it has four fields, a name of the location, a description, a flag marking whether or not
  * the location has been visited, and an ArrayList of Doors denoting where the user can travel.
  */
@@ -101,7 +102,7 @@ public class Location {
      * @return
      */
     public String describeLocation() {
-        return this.description + "\n" + this.items + describeDoors();
+        return this.description + "\n" + getItemsInLocation() + "\n" + describeDoors();
     }
 
     /**
@@ -128,24 +129,68 @@ public class Location {
         this.doors.add(door);
     }
 
+    /**
+     * adds item to location
+     * @param item item to be added: Item
+     */
     public void addItem(Item item) {
         this.items.add(item);
     }
 
+    /**
+     * removes item from location
+     * @param item item to be added: Item
+     */
     public void removeItem(Item item) {
         this.items.remove(item);
     }
 
+    /**
+     * fidns item with given name in location
+     * @param name  name of item to be found: String
+     * @return the item found in the location, or null if none is found: Item
+     */
     public Item getItemNamed(String name) {
+        Optional<Item> match = this.items.stream()
+            .filter(item -> item.getName().equalsIgnoreCase(name))
+            .findFirst();
+        if (match.isPresent()) {
+            return match.get();
+        }
         return null;
     }
 
+    /**
+     * makes a readable string of the items in the location to be printed to the user
+     * @return a string represetnation of the items in the location: String
+     */
     public String getItemsInLocation() {
-        String items = "";
-        for (Item item : this.items) {
-            items += item.toString() + "\n";
+        String itemString = "";
+        if (this.items.size() > 0) {
+            itemString = "\n  *  You can pick up a";
+            Set<Character> vowels = Set.of('A', 'E', 'I', 'O', 'U');
+            if (vowels.contains(this.items.get(0).toString().toUpperCase().charAt(0))) {
+                itemString += "n";
+            }
+            itemString += " ";
+            
+            for (Item item : this.items) {
+                if (this.items.size() > 1 && item.toString().equalsIgnoreCase(this.items.getLast().toString())) {
+                    itemString += "or ";
+                }
+                itemString += item.toString() + ", ";
+            }
+            itemString = itemString.substring(0, itemString.length() - 2) + ". Enter 'pickup x' to pick up an item 'x'.\n";
         }
-        return items;
+        return itemString;
+    }
+
+    /**
+     * gets the items in the location
+     * @return  the items in the location: ArrayList<Item>
+     */
+    public ArrayList<Item> getItems() {
+        return this.items;
     }
 
     /**

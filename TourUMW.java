@@ -6,19 +6,16 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-// okay its just the locations that arent being createed right now it ll be okay
-
 
 /**
  * @author Nora Peters
- * @version 1.0
+ * @version 2.0
  * 
- * TourUMW
+ * TourUMW runs the simulator and campus loops that prompt user for input. is also responsible for campus objects.
  */
-public class TourUMW { // works.
+public class TourUMW { 
     /**
-     * Main class of package. Runs the tourUMW simulator and contains logic to prompt and interpret user input.
-     * Is also responsible for the initialization of campus objects.
+     * Main method. runs simulator loop
      * @param args Command line arguments. N/A
      */
     public static void main(String[] args) {
@@ -50,67 +47,51 @@ public class TourUMW { // works.
      * Used to store and update and store users location on the tour.
      */
     private static void campusLoop(Scanner s, TourStatus status) {
-        //System.out.println();
         boolean continueTour = true;
-        System.out.println(status.getCurrentLocation().describeLocation());
-        status.getCurrentLocation().setHaveVisited(true);
+
+        Location current = status.getCurrentLocation();
+        System.out.println("\n" + current.describeLocation());
+        current.setHaveVisited(true);
+        
         while (continueTour) { 
-            // get current location
-            // uneccisary?
-            //Location cLocation = status.getCurrentLocation();
-  
-            // print current location
-            // xed out bc its going to be done through movement command
-            /*String desc = "\n\n" + cLocation.getName() + "\n";
-            if (cLocation.getHaveVisited() == false) {
-                desc += cLocation.getDescription() + "\n";
-            }
-            System.out.println(desc);
-            status.getCurrentLocation().setHaveVisited(true);*/
-
-            // print directions
-            // also going to be done in movement command
-            //System.out.println(cLocation.describeDoors());
-
             // ask for direction
-            // add pickup drop and backpack instructions
-            System.out.print("enter a direction, or type 'quit' to exit campus: ");
+            String instruction = "enter a direction, or type 'quit' to exit campus: ";
+            if (status.getBackpack().size() > 0 || status.getCurrentLocation().getItems().size() > 0) {
+                instruction = "enter a direction or command, or type 'quit' to exit campus: ";
+            }
+            System.out.print(instruction);
             UserInputCommand command = parseInput(s.nextLine());
 
             // carry out user input
             if (command == null) {
                 continueTour = false;
             } else {
-                System.out.println(command.carryOut());
-            } /*else if (!Door.isValidDir(dir)) {
-                System.out.print("Error: please enter a valid direction.");
-            } else {
-                status.updateTourLocation(dir);
-                if (status.getCurrentLocation().equals(cLocation)) { // if status couldn't update location
-                    System.out.print("Error: could not move in specified direction.");
-                }
-            }*/
+                System.out.println(command.carryOut()); 
+            }
         }
         System.out.println("\n\n\nYou've exited the tour of " + status.getCampus().getCampusName() + "! ");
     }
 
+    /**
+     * parses user input into UserInputCommand.
+     * @param input  a string input by user: String
+     * @return a UserInputCommand representing the action the user wishes to take: UserInputCommand
+     */
     public static UserInputCommand parseInput(String input) {
         String in = input.trim().toUpperCase();
 
-        String first = in.substring(0,1);
-        Set<String> dirs = Set.of("N", "S", "E", "W"); 
+        char first = in.charAt(0);
+        Set<Character> dirs = Set.of('N', 'S', 'E', 'W'); 
         String[] words = in.split(" ");
         String itemName = Arrays.stream(words).skip(1).collect(Collectors.joining(" "));
 
         // switch?
         UserInputCommand command = null;
         if (dirs.contains(first)) {
-            command = new MovementCommand(first);
+            command = new MovementCommand(String.valueOf(first));
         } else if (words[0].equals("PICKUP")) {
-            // test if itemName exists
             command = new PickupCommand(itemName);
         } else if (words[0].equals("DROP")) {
-            // test if itemName exists
             command = new DropCommand(itemName);
         } else if (words[0].equals("BACKPACK")) {
             command = new BackpackCommand();
@@ -131,53 +112,87 @@ public class TourUMW { // works.
      */
     public static Campus setUpCampus(Scanner s) { // this needs to somehow parse bad input files. its supposed to fail if format is off
         Campus c = null;
-        boolean unfinishedSetup = true;
         String filename = getValidFilename(s);
+
+        boolean unfinishedSetup = true;
         if (filename == null) { // user wants to quit
             unfinishedSetup = false;
         }
         while (unfinishedSetup) {
             try (Scanner fs = new Scanner(Path.of(filename))) {
+                enum InputType { LOCATION, DOOR, ITEM, NONE };
+                InputType type = InputType.NONE;
                 ArrayList<String> lines = new ArrayList<>();
-                boolean isALocation = true;
 
                 while (fs.hasNextLine()) {
                     String line = fs.nextLine().trim();
 
                     if (c == null) {
                         c = new Campus(line, filename); // initializes campus from name and filename
-                    } else if (line.equalsIgnoreCase("Doors:")) {
-                        isALocation = false;
-                    } else if (!line.contains("*****") && !line.contains("+++") && !line.endsWith(":")) { // line containing informaton about an object
-                        lines.add(line);
-                        //System.out.println(line);
-                    } else if (lines.size() != 0){ // line must be a +++, delimiting end of object to-be
-                        
-                        if (isALocation) { // is end of a location
-                            String name = lines.get(0);
-                            lines.removeFirst();
-                            String desc = String.join(" ", lines);
-
-                            Location l = new Location(name, desc);
-                            if (c.getStartingLocation().getName().equalsIgnoreCase("")) { // adds starting location
-                                c.setStartingLocation(l); 
-                            }
-                            c.addLocation(l); // adds location 
-                        } else { // is end of a door
-                            String dir = lines.get(1).toUpperCase().substring(0,1);
-                            String enter = lines.get(2);
-                            String leave = lines.get(0);
-
-                            Location leaveLoc = c.getLocation(leave);
-                            Location enterLoc = c.getLocation(enter);
-                            Door d = new Door(dir, leaveLoc, enterLoc); // leaving door, points away from 
-
-                            c.getLocation(leave).addDoor(d); // adds door to location: door points outward from its location
-                        }
-                        lines.clear(); // cleans up for next object
-                    }
-                    // tests to see if file was valid; doors need to be connected properly for functionality
+                        continue;
+                    } 
                     
+                    if (line.endsWith(":")) {
+                        switch (line.toUpperCase()) {
+                            case "LOCATIONS:": 
+                                type = InputType.LOCATION;
+                                break;
+                            case "DOORS:": 
+                                type = InputType.DOOR;
+                                break;
+                            case "ITEMS:":
+                                type = InputType.ITEM;
+                                break;
+                        }
+                        continue;
+                    }
+
+                    if (!line.contains("*****") && !line.contains("+++")) { // line containing informaton about an object
+                        lines.add(line);
+                    } 
+                    
+                    if (line.contains("+++") && type != InputType.NONE) { // end of an object to be created
+                        switch (type) {
+                            case InputType.LOCATION: {
+                                String locName = lines.get(0);
+                                lines.removeFirst();
+                                String desc = String.join(" ", lines);
+                                Location newLoc = new Location(locName, desc);
+                                
+                                if (c.getStartingLocation().getName().equalsIgnoreCase("")) { // adds starting location
+                                    c.setStartingLocation(newLoc); 
+                                }
+                                c.addLocation(newLoc); // adds location 
+                                break;
+                            }
+                            case InputType.DOOR: {
+                                String leave = lines.get(0);
+                                String dir = lines.get(1).toUpperCase().substring(0,1);
+                                String enter = lines.get(2);
+
+                                Location leaveLoc = c.getLocation(leave);
+                                Location enterLoc = c.getLocation(enter);
+                                Door d = new Door(dir, leaveLoc, enterLoc); // leaving door, points away from 
+
+                                // dependant on doors coming after locations in file
+                                c.getLocation(leave).addDoor(d); // adds door to location: door points outward from its location.
+                                break;
+                            }
+                            case InputType.ITEM: {
+                                String itemName = lines.get(0);
+                                String locName = lines.get(1);
+                                String desc = lines.get(2);
+
+                                Item item = new Item(itemName, desc);
+                                c.getLocation(locName).addItem(item);
+                                break;
+                            }
+                            case InputType.NONE: { break; }
+                        }
+                        lines.clear();
+                        
+                    } 
+    
                 }
                 unfinishedSetup = false;
             } catch(Exception e) { // catches any exceptions that occur when reading file. exception thrown implies invalid format, but not all problems with invalid format may be caught.

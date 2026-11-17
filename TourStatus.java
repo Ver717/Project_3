@@ -1,7 +1,5 @@
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.Optional;
 
 /**
 * The TourStatus class represents the state of a tour of a campus object. it has fields storing a campus object and the current location of the tour.
@@ -91,24 +89,66 @@ public class TourStatus {
         }
     }
 
+    /**
+     * adds an item to the backpack
+     * @param item  an item to be added to the backpack: Item
+     */
     public void addToBackpack(Item item) {
         this.backpack.add(item);
     }
 
+    /**
+     * removes an item from the backpack and adds it to current location
+     * @param name  the name of the item to be removed: String
+     * @return the item that was removed from the backpack, or null if no item was found: Item
+     */
     public Item dropItemFromBackpack(String name) {
-        //Item item = this.backpack.sort();
+        //Item match = searchItems(name, this.backpack);
+
+        Optional<Item> match = this.backpack.stream()
+            .filter(item -> name.equalsIgnoreCase(item.getName()))
+            .findFirst();
+        if (match.isPresent()) {
+            Item item = match.get();
+            backpack.remove(item);
+            this.currentLocation.addItem(item);
+            return item;
+        }
         return null;
     }
 
-    public Item pickUpItemFromLocation(String name) {
-        return null;
+    /**
+     * puts an item from the location into the backpack
+     * @param name  the name of the item to be picked up: String
+     * @return  the item that was picked up from the location, or null if no matching item was found: Item
+     */
+    public Item pickUpItemFromLocation(String name) { 
+        Item match = this.currentLocation.getItemNamed(name); 
+        
+        if (match != null) {
+            this.currentLocation.removeItem(match);
+            this.backpack.add(match);
+        }
+        return match;
     }
 
+    /**
+     * formats the items into the backpack into a printable string
+     * @return  a string representation of the items in the user's backpack: String
+     */
     public String listBackpackItems() {
         String items = "";
         for (Item item : this.backpack) {
-            items += item + "\n";
+            items += item.toString() + "\n";
         }
         return items;
+    }
+
+    /**
+     * returns the user's backpack
+     * @return the user's backpack: ArrayList<Item>
+     */
+    public ArrayList<Item> getBackpack() {
+        return this.backpack;
     }
 }
